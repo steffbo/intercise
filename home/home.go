@@ -9,11 +9,11 @@ import (
 // Home Comment
 func Home(w http.ResponseWriter, r *http.Request) {
 
-	template := pongo2.FromFile("template/index.html")
-	tplExample := pongo2.Must(template)
-		
+	tplExample := pongo2.Must(pongo2.FromFile("template/index.html"))
+
 	ctx := pongo2.Context{
 		"destination": "stefan",
+		"interval":    Interval{5}.GetInterval(),
 	}
 
 	// Execute the template per HTTP request
