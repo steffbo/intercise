@@ -6,14 +6,13 @@ import (
 	"github.com/flosch/pongo2"
 )
 
-// Home Comment
+// Home delivers the homepage
 func Home(w http.ResponseWriter, r *http.Request) {
 
 	tplExample := pongo2.Must(pongo2.FromFile("template/index.html"))
 
 	ctx := pongo2.Context{
-		"destination": "stefan",
-		"interval":    Interval{5}.GetInterval(),
+		"interval": "stefan",
 	}
 
 	// Execute the template per HTTP request
