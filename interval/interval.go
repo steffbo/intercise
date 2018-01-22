@@ -1,71 +1,153 @@
 package interval
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
-	"github.com/flosch/pongo2"
+	"github.com/gorilla/mux"
 )
 
 // Interval struct
 type Interval struct {
-	Exercises []Exercise
-	Pauses    []Pause
+	ID    int
+	Items []Item `json:"items"`
 }
 
-// Exercise struct
-type Exercise struct {
+// Item is an interface for both Exercise and Pause
+type Item struct {
 	ID       int
-	Name     string
-	Duration int
+	Name     string `json:"name"`
+	Duration int    `json:"duration"`
 }
 
-// Pause struct
-type Pause struct {
-	ID       int
-	Duration int
+// MakeExercise creates a new Item for an exercise
+func MakeExercise(name string, duration int) Item {
+	return Item{-1, name, duration}
 }
 
-var intervals []Interval
-var exercises []Exercise
-var pauses []Pause
-
-func init() {
-	exercises = append(exercises, Exercise{ID: 1, Name: "pushups", Duration: 60})
-	exercises = append(exercises, Exercise{ID: 3, Name: "burpees", Duration: 60})
-	pauses = append(pauses, Pause{ID: 2, Duration: 15})
-	intervals = append(intervals, Interval{Exercises: exercises, Pauses: pauses})
+// MakePause creates a new Item for a pause
+func MakePause(duration int) Item {
+	return Item{-1, "pause", duration}
 }
 
-func addExercise(name string, duration int) Exercise {
-	return Exercise{1, name, duration}
+// AddItems adds multiple Items at once to an interval
+func (i Interval) AddItems(items []Item) Interval {
+	for _, e := range items {
+		i.AddItem(e)
+	}
+	return i
+}
+
+// AddItem adds a single item to an interval
+// The item is assigned an ID
+func (i Interval) AddItem(item Item) Interval {
+	item.ID = len(i.Items)
+	if i.Items == nil {
+		i.Items = []Item{item}
+	} else {
+		i.Items = append(i.Items, item)
+	}
+	return i
+}
+
+func (i Item) String() string {
+	return fmt.Sprintf("ID: %d, Name: %s, Duration: %d", i.ID, i.Name, i.Duration)
+}
+
+func (i Interval) String() string {
+	str := ""
+	for _, e := range i.Items {
+		str = str + e.String()
+	}
+	return str
+}
+
+// AddExercise adds a new Item to the slice of items
+func (i Interval) AddExercise(name string, duration int) Interval {
+
+	nextID := len(i.Items)
+	newItem := Item{nextID, name, duration}
+
+	if i.Items == nil {
+		i.Items = []Item{newItem}
+	} else {
+		i.Items = append(i.Items, newItem)
+	}
+	return i
+}
+
+// AddPause adds a new Item to the slice of items
+func (i Interval) AddPause(duration int) Interval {
+
+	nextID := len(i.Items)
+	newItem := Item{nextID, "pause", duration}
+
+	if i.Items == nil {
+		i.Items = []Item{newItem}
+	} else {
+		i.Items = append(i.Items, newItem)
+	}
+	return i
 }
 
 // Duration returns the summed interval time
 func (i Interval) Duration() int {
 	var duration int
 
-	for _, e := range i.Exercises {
-		duration += e.Duration
-	}
-
-	for _, e := range i.Pauses {
+	for _, e := range i.Items {
 		duration += e.Duration
 	}
 
 	return duration
 }
 
-// HandleRequest returns the requested interval
-func HandleRequest(w http.ResponseWriter, r *http.Request) {
-	tplExample := pongo2.Must(pongo2.FromFile("template/index.html"))
+var intervals []Interval
 
-	ctx := pongo2.Context{
-		"interval": intervals,
+func init() {
+	interval0 := Interval{0, nil}.AddExercise("pushups", 60).AddPause(20).AddExercise("burpees", 60)
+	interval1 := Interval{1, nil}.AddExercise("jumping jacks", 60).AddPause(20).AddExercise("crunches", 60)
+	intervals = append(intervals, interval0, interval1)
+}
+
+// GetIntervals returns all intervals
+func GetIntervals(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(intervals)
+}
+
+// GetInterval returns a single interval
+func GetInterval(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	for _, item := range intervals {
+		id, _ := strconv.Atoi(params["id"])
+		if item.ID == id {
+			json.NewEncoder(w).Encode(item)
+			return
+		}
 	}
+}
 
-	// Execute the template per HTTP request
-	err := tplExample.ExecuteWriter(ctx, w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+// CreateInterval adds a new interval
+func CreateInterval(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	var interval Interval
+	_ = json.NewDecoder(r.Body).Decode(&interval)
+	id, _ := strconv.Atoi(params["id"])
+	interval.ID = id
+	intervals = append(intervals, interval)
+	json.NewEncoder(w).Encode(intervals)
+}
+
+// DeleteInterval removes an interval
+func DeleteInterval(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	for index, item := range intervals {
+		id, _ := strconv.Atoi(params["id"])
+		if item.ID == id {
+			intervals = append(intervals[:index], intervals[index+1:]...)
+			break
+		}
+		json.NewEncoder(w).Encode(intervals)
 	}
 }
