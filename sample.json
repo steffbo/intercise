@@ -1,0 +1,21 @@
+{
+    "Interval": {
+        "Items": [
+            {
+                "ID": 0,
+                "Name": "Push-ups",
+                "Duration": 60
+            },
+            {
+                "ID": 1,
+                "Name": "Pause",
+                "Duration": 20
+            },
+            {
+                "ID": 2,
+                "Name": "Burpees",
+                "Duration": 60
+            }
+        ]
+    }
+}
